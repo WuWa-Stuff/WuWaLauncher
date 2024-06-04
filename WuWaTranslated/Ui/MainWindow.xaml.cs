@@ -8,6 +8,7 @@ using Wpf.Ui.Appearance;
 using WuWaTranslated.Attributes;
 using WuWaTranslated.GithubApi;
 using WuWaTranslated.GithubApi.Repos.Models;
+using WuWaTranslated.Models.Config;
 using WuWaTranslated.TaskState;
 using WuWaTranslated.Ui.Models;
 using File = System.IO.File;
@@ -38,13 +39,16 @@ public partial class MainWindow
 
     private readonly MainWindowContext _context;
     private readonly GithubApiClient _githubApiClient;
+    private readonly ConfigHolder _config;
 
     private readonly string _appDirectory;
-    private readonly string _gameDirectory;
-    private readonly string _translationFile;
-    private readonly string _gamePaksDirectory;
-    private readonly string _gameExeFile;
+    private readonly string _appDataDirectory;
     private readonly ReadOnlyCollection<string> _gameLaunchArgs;
+
+    private string _gameDirectory = string.Empty;
+    private string _gamePaksDirectory = string.Empty;
+    private string _gameExeFile = string.Empty;
+    private string _translationFile = string.Empty;
 
     private AssetItem? _pakFileOnServer;
     private string _pakShaServer = string.Empty;
@@ -57,20 +61,28 @@ public partial class MainWindow
     public MainWindow()
     {
         _context = new MainWindowContext();
-        _gameDirectory = _appDirectory = GetAppDirectory();
+
+        _appDataDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "wuwa_translated");
+        var configFilePath = Path.Combine(_appDataDirectory, "config.json");
+        _config = new ConfigHolder(configFilePath);
+
+        var gameDirectory = _appDirectory = GetAppDirectory();
 #if DEBUG
         var dbgGamePath = Environment.GetEnvironmentVariable("DBG_GAME_PATH");
         if (!string.IsNullOrEmpty(dbgGamePath))
-            _gameDirectory = Path.Combine(dbgGamePath, ".fake_folder"); // this folder will not exist, it's only for debugging
+            gameDirectory = Path.Combine(dbgGamePath, ".fake_folder"); // this folder will not exist, it's only for debugging
 #endif
+
+        if (!Directory.Exists(_appDataDirectory))
+            Directory.CreateDirectory(_appDataDirectory);
+
 #if !SINGLE_FILE_BUILD
-        _gameDirectory = Directory.GetParent(_gameDirectory)?.FullName
-                         ?? Path.GetPathRoot(_gameDirectory)
-                         ?? _gameDirectory;
+        gameDirectory = Directory.GetParent(gameDirectory)?.FullName
+                        ?? Path.GetPathRoot(gameDirectory)
+                        ?? gameDirectory;
 #endif
-        _gamePaksDirectory = Path.Combine(_gameDirectory, "Client", "Content", "Paks");
-        _translationFile = Path.Combine(_gamePaksDirectory, TranslationFileName);
-        _gameExeFile = Path.Combine(_gameDirectory, "Client", "Binaries", "Win64", GameExeFileName);
+        ChangeGameDirectory(gameDirectory);
 
         var launchArgs = new List<string> { "Client", "-fileopenlog" }; // о нэээт... они своровали параметр запуска... (с)
         if (Utilities.ShouldDisableDlss())
@@ -94,6 +106,14 @@ public partial class MainWindow
             "ОШИБКА!",
             MessageBoxButton.OK,
             MessageBoxImage.Error);
+    }
+
+    private void ChangeGameDirectory(string newPath)
+    {
+        _gameDirectory = newPath;
+        _gamePaksDirectory = Path.Combine(_gameDirectory, "Client", "Content", "Paks");
+        _gameExeFile = Path.Combine(_gameDirectory, "Client", "Binaries", "Win64", GameExeFileName);
+        _translationFile = Path.Combine(_gamePaksDirectory, TranslationFileName);
     }
 
     private record UpdateInfo(AssetItem PakFile, string Sha256, DateTime ReleaseDate);
@@ -141,102 +161,6 @@ public partial class MainWindow
         return TaskState.Enums.TaskState.Success;
     }
 
-    private async Task<TaskResult> RemoveOldExecutable()
-    {
-        var args = Environment.GetCommandLineArgs().Skip(1).ToArray();
-        var mode = args.ElementAtOrDefault(0);
-        if (!AppLaunchModeInstall.Equals(mode, StringComparison.OrdinalIgnoreCase))
-            return TaskState.Enums.TaskState.Success;
-
-        var exePath = Utilities.GetCurrentExecutable();
-
-        var oldExePidStr = args.ElementAtOrDefault(1);
-        var oldExePath = args.ElementAtOrDefault(2);
-        var oldExeDir = Path.GetDirectoryName(oldExePath);
-        if (!int.TryParse(oldExePidStr, out var oldExePid) ||
-            string.IsNullOrEmpty(oldExePath) ||
-            string.IsNullOrEmpty(oldExeDir))
-            return new TaskResult("Что-то пошло не так...\n" +
-                                  $"Запускай меня теперь всегда из этого места: {exePath}");
-
-        try
-        {
-            var oldProc = Process.GetProcessById(oldExePid);
-            await oldProc.WaitForExitAsync();
-        }
-        catch { /* Do nothing i guess */ }
-        await Task.Delay(3_000);
-
-        Exception? removeInOldPlaceError = default;
-
-#if SINGLE_FILE_BUILD
-        var exeName = Path.GetFileName(exePath);
-        var oldExeName = Path.GetFileName(oldExePath);
-        if (!exeName.Equals(oldExeName, StringComparison.OrdinalIgnoreCase))
-            return TaskState.Enums.TaskState.Success;
-
-        try
-        {
-            if (File.Exists(oldExePath))
-                File.Delete(oldExePath);
-        }
-        catch (Exception e)
-        {
-            removeInOldPlaceError = e;
-        }
-#else
-        try
-        {
-            if (File.Exists(oldExePath))
-                Directory.Delete(oldExeDir, true);
-        }
-        catch (Exception e)
-        {
-            removeInOldPlaceError = e;
-        }
-#endif
-
-        try
-        {
-            if (!Directory.Exists(oldExeDir))
-                Directory.CreateDirectory(oldExeDir);
-
-            var lnkPath = Path.ChangeExtension(oldExePath, ".lnk");
-            if (File.Exists(lnkPath))
-                File.Delete(lnkPath);
-
-            var wScriptShellType = Type.GetTypeFromProgID("WScript.Shell");
-            if (wScriptShellType is null)
-                return new TaskResult("Кажется, твоя ОС не имеет нужных компонентов для работы с ярлыками.\n" +
-                                      "Увы, но в таком случае не смогу создать ярлык на старом месте для тебя.\n" +
-                                      $"Запускай меня теперь всегда из этого места: {exePath}");
-
-            dynamic? shell = Activator.CreateInstance(wScriptShellType);
-            if (shell is null)
-                return new TaskResult("Не получилось создать ярлык на старом месте...");
-
-            var shortcut = shell.CreateShortcut(lnkPath);
-            if (shortcut is null)
-                return new TaskResult("Не получилось создать ярлык на старом месте...");
-
-            shortcut.Description = "Можно теперь запускать и отсюда...";
-            shortcut.TargetPath = exePath;
-            shortcut.WorkingDirectory = Path.GetDirectoryName(exePath) ?? Environment.CurrentDirectory;
-            shortcut.Save();
-        }
-        catch (Exception e)
-        {
-            return new TaskResult($"Не получилось создать ярлык на старом месте: {e.Message}", e);
-        }
-
-        if (removeInOldPlaceError is null)
-            return TaskState.Enums.TaskState.Success;
-
-        return new TaskResult(
-            $"Почти всё прошло нормально, но старые файлы удалить не удалось: {removeInOldPlaceError.Message}",
-            removeInOldPlaceError);
-    }
-
     private static string GetAppDirectory()
         => Path.GetDirectoryName(Utilities.GetCurrentExecutable()) ?? Environment.CurrentDirectory;
 
@@ -248,25 +172,6 @@ public partial class MainWindow
         return awaitingDialog.Result;
     }
 
-#if !SINGLE_FILE_BUILD
-    private static bool IsNotLooksLikeAppFile(string file, string appExePath)
-    {
-        var appFileName = Path.GetFileNameWithoutExtension(appExePath);
-        var fileName = Path.GetFileName(file);
-        var ext = Path.GetExtension(file).ToUpperInvariant();
-        return ext switch
-        {
-            ".EXE" when ext.Contains(appFileName, StringComparison.InvariantCultureIgnoreCase) => false,
-            _ when fileName.StartsWith(appFileName, StringComparison.InvariantCultureIgnoreCase) => false,
-            ".DLL" => false,
-            _ when fileName.EndsWith(".runtimeconfig.json", StringComparison.InvariantCultureIgnoreCase) => false,
-            _ when fileName.EndsWith(".deps.json", StringComparison.InvariantCultureIgnoreCase) => false,
-            ".PDB" => false,
-            _ => true
-        };
-    }
-#endif
-
     private async Task<TaskResult> Install()
     {
         var gameDirectoryResult = await FetchGameDirectory();
@@ -274,84 +179,7 @@ public partial class MainWindow
             return gameDirectoryResult;
 
         var gameDirectory = gameDirectoryResult.Content!;
-        var currentExe = Utilities.GetCurrentExecutable();
-
-#if SINGLE_FILE_BUILD
-        var currentExeName = Path.GetFileName(currentExe);
-        try
-        {
-            var newPath = Path.Combine(gameDirectory, currentExeName);
-            if (File.Exists(newPath))
-                File.Delete(newPath);
-
-            File.Copy(currentExe, newPath, true);
-        }
-        catch (Exception e)
-        {
-            return new TaskResult($"Во время установки произошла ошибка: {e.Message}", e);
-        }
-
-        var fileInfo = new FileInfo(currentExe);
-        var parentDirectory = fileInfo.Directory ?? new DirectoryInfo(currentExe).Root;
-#else
-        var currentFolder = Path.GetDirectoryName(currentExe);
-        if (string.IsNullOrEmpty(currentFolder))
-            return new TaskResult("Распакуй этот установщик в пустую папку!");
-
-        var looksLikeRightFolder = Directory.EnumerateFiles(currentFolder)
-            .Count(x => IsNotLooksLikeAppFile(x, currentExe)) < 10;
-
-        if (!looksLikeRightFolder)
-            return new TaskResult(
-                "Выглядит так, будто установщик не там, где надо... Распакуй его в пустую папку!");
-
-        var currentDirectoryInfo = new DirectoryInfo(currentFolder);
-        var parentDirectory = currentDirectoryInfo.Parent ?? currentDirectoryInfo.Root;
-
-        try
-        {
-            foreach (var file in Directory.EnumerateFiles(currentFolder, "*", SearchOption.AllDirectories))
-            {
-                var relativePath = Path.GetRelativePath(parentDirectory.FullName, file);
-                var targetPath = Path.GetFullPath(relativePath, gameDirectory);
-
-                var targetDir = new FileInfo(targetPath).Directory!;
-                if (!targetDir.Exists)
-                    targetDir.Create();
-
-                File.Copy(file, targetPath, true);
-            }
-        }
-        catch (Exception e)
-        {
-            return new TaskResult($"Во время установки произошла ошибка: {e.Message}", e);
-        }
-#endif
-
-        var relativeExePath = Path.GetRelativePath(parentDirectory.FullName, currentExe);
-        var targetExePath = Path.GetFullPath(relativeExePath, gameDirectory);
-        var currentPid = Environment.ProcessId.ToString();
-
-        try
-        {
-            var procStartInfo = new ProcessStartInfo(targetExePath, [AppLaunchModeInstall, currentPid, currentExe])
-            {
-                WorkingDirectory = gameDirectory
-            };
-            var procInfo = Process.Start(procStartInfo);
-            if (procInfo is null)
-                return new TaskResult("Требуется запуск из установленного месте вручную..." +
-                                      $"Искать меня теперь где-то тут: {targetExePath}");
-
-            Environment.Exit(0);
-            return TaskState.Enums.TaskState.Success;
-        }
-        catch (Exception e)
-        {
-            return new TaskResult("А я не могу запустить себя из того места, куда установило меня...\n" +
-                                  $"Искать меня где-то тут: {targetExePath}",
-                e);
-        }
+        return await _config.EditConfig(c => c.GameDirectory = gameDirectory);
     }
 
     private bool FindLauncherReleaseFile(AssetItem item)
@@ -499,15 +327,24 @@ public partial class MainWindow
     {
         try
         {
+            var result = await _config.Load();
+            HandleError(result);
+
+            var config = await _config.Get();
+
+            _context.IsAppInstalled = Directory.Exists(_gamePaksDirectory);
+            if (_context.IsAppInstalled)
+            {
+                await _config.EditConfig(c => c.GameDirectory = _gameDirectory);
+            }
+            else if (!string.IsNullOrEmpty(config.GameDirectory))
+            {
+                ChangeGameDirectory(config.GameDirectory);
+            }
+
             _context.IsAppInstalled = Directory.Exists(_gamePaksDirectory);
             if (!_context.IsAppInstalled)
                 return;
-
-            var result = await RemoveOldExecutable();
-            if (result.State is TaskState.Enums.TaskState.Cancelled)
-                return;
-
-            HandleError(result);
 
             var bResult = await CheckForLauncherUpdates(default).ConfigureAwait(false);
             if (bResult.State is TaskState.Enums.TaskState.Success && bResult.Content)
