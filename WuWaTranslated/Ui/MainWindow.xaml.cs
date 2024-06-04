@@ -113,6 +113,7 @@ public partial class MainWindow
         _gamePaksDirectory = Path.Combine(_gameDirectory, "Client", "Content", "Paks");
         _gameExeFile = Path.Combine(_gameDirectory, "Client", "Binaries", "Win64", GameExeFileName);
         _translationFile = Path.Combine(_gamePaksDirectory, TranslationFileName);
+        Dispatcher.Invoke(() => _context.IsAppInstalled = Directory.Exists(_gamePaksDirectory));
     }
 
     private record UpdateInfo(AssetItem PakFile, string Sha256, DateTime ReleaseDate);
@@ -178,6 +179,7 @@ public partial class MainWindow
             return gameDirectoryResult;
 
         var gameDirectory = gameDirectoryResult.Content!;
+        ChangeGameDirectory(gameDirectory);
         return await _config.EditConfig(c => c.GameDirectory = gameDirectory);
     }
 
