@@ -7,6 +7,7 @@ on:
 jobs:
   build:
     runs-on: "linux-64-runner"
+    if: "!contains(github.event.head_commit.message, '[ci skip]')"
 
     steps:
     - name: Set vars
