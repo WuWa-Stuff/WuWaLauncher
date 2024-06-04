@@ -43,5 +43,5 @@ jobs:
         tag_name: v${{ steps.vars.outputs.sha_short }}
         token: ${{ steps.app_token.outputs.token }}
         files: |
-          "${{ github.workspace }}/build.zip"
-          "${{ github.workspace }}/build_sf/WuWaTranslated.exe"
+          build.zip
+          build_sf/WuWaTranslated.exe
