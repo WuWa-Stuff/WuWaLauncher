@@ -1,0 +1,47 @@
+name: Pak file build
+
+on:
+  push:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: "linux-64-runner"
+
+    steps:
+    - name: Set vars
+      id: vars
+      run: |
+        echo "app_version=$(git rev-list --count master)" >> $GITHUB_OUTPUT
+        echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+    - name: Pre-fetch sources
+      uses: actions/create-github-app-token@v1
+      id: app_token
+      with:
+        app-id: ${{ secrets.REPO_READONLY_GITHUB_APP_ID }}
+        private-key: ${{ secrets.REPO_READONLY_GITHUB_APP_KEY }}
+        owner: ${{ github.repository_owner }}
+    - name: Fetch sources with submodules
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        token: ${{ steps.app_token.outputs.token }}
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v2
+      with:
+        dotnet-version: 8.x.x
+    - name: Build single exe
+      run: dotnet publish "${{ github.workspace }}/WuWaTranslated/WuWaTranslated.csproj" -c "ReleaseSingle" -o "${{ github.workspace }}/build_sf/" --os "win" --sc true -p:PublishSingleFile=true
+    - name: Build
+      run: dotnet publish "${{ github.workspace }}/WuWaTranslated/WuWaTranslated.csproj" -c "Release" -o "${{ github.workspace }}/build/" --os "win" --sc false
+    - name: Build to zip
+      run: pushd "${{ github.workspace }}/build"; zip -r "${{ github.workspace }}/build.zip" .; popd
+    - name: Release
+      uses: softprops/action-gh-release@v2
+      with:
+        name: v${{ steps.vars.outputs.sha_short }}
+        tag_name: v${{ steps.vars.outputs.sha_short }}
+        token: ${{ steps.app_token.outputs.token }}
+        files: |
+          build.zip
+          build_sf/WuWaTranslated.exe
