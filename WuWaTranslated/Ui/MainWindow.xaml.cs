@@ -517,7 +517,7 @@ public partial class MainWindow
             }
             else
             {
-                HandleError(result);
+                HandleError(bResult);
             }
 
             result = await CheckForPakFileUpdates(default).ConfigureAwait(false);
