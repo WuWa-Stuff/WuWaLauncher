@@ -11,7 +11,9 @@ jobs:
     steps:
     - name: Set vars
       id: vars
-      run: echo "app_version=$(git rev-list --count master)" >> $GITHUB_OUTPUT
+      run: |
+        echo "app_version=$(git rev-list --count master)" >> $GITHUB_OUTPUT
+        echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
     - name: Pre-fetch sources
       uses: actions/create-github-app-token@v1
       id: app_token
