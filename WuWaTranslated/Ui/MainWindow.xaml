@@ -1,0 +1,330 @@
+﻿<ui:FluentWindow x:Class="WuWaTranslated.Ui.MainWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:local="clr-namespace:WuWaTranslated"
+                 mc:Ignorable="d"
+                 ExtendsContentIntoTitleBar="True"
+                 WindowBackdropType="Tabbed"
+                 ResizeMode="NoResize"
+                 WindowStartupLocation="CenterScreen"
+                 Title="{Binding Title}" Height="450" Width="800"
+                 Loaded="MainWindow_OnLoaded">
+    <DockPanel>
+        <!-- Title bar -->
+        <Grid DockPanel.Dock="Top">
+            <ui:TitleBar Title="{Binding Title}"
+                         FontSize="18"
+                         CanMaximize="False" ShowMaximize="False">
+                <ui:TitleBar.Header>
+                    <!-- Title bar buttons -->
+                    <DockPanel>
+                        <ui:Button Margin="0, 0, 10, 0" Padding="4"
+                                   Click="ButtonGitHub_OnClick">
+                            <Image Height="24" Width="24" Source="{StaticResource IconGitHub}"/>
+                            <ui:Button.ToolTip>
+                                <ToolTip Content="Открыть наш GitHub репозиторий"
+                                         Placement="MousePoint"
+                                         HorizontalOffset="5"
+                                         VerticalOffset="5"/>
+                            </ui:Button.ToolTip>
+                        </ui:Button>
+                        <ui:Button Margin="0, 0, 10, 0" Padding="4"
+                                   Click="ButtonTelegram_OnClick">
+                            <Image Height="24" Width="24" Source="{StaticResource IconTelegram}"/>
+                            <ui:Button.ToolTip>
+                                <ToolTip Content="Открыть наш канал в Telegram"
+                                         Placement="MousePoint"
+                                         HorizontalOffset="5"
+                                         VerticalOffset="5"/>
+                            </ui:Button.ToolTip>
+                        </ui:Button>
+                        <ui:Button Margin="0, 0, 10, 0" Padding="4"
+                                   Click="ButtonDiscord_OnClick">
+                            <Image Height="24" Width="24" Source="{StaticResource IconDiscord}"/>
+                            <ui:Button.ToolTip>
+                                <ToolTip Content="Присоединиться на наш Discord сервер"
+                                         Placement="MousePoint"
+                                         HorizontalOffset="5"
+                                         VerticalOffset="5"/>
+                            </ui:Button.ToolTip>
+                        </ui:Button>
+                    </DockPanel>
+                </ui:TitleBar.Header>
+            </ui:TitleBar>
+        </Grid>
+        <!-- Window content -->
+        <Grid>
+            <!-- Loading view -->
+            <Grid Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}"
+                  d:IsHidden="True">
+                <Grid.RowDefinitions>
+                    <RowDefinition/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition/>
+                </Grid.RowDefinitions>
+                <ui:ProgressRing Grid.Row="1"
+                                 IsIndeterminate="True"/>
+                <ui:TextBlock Grid.Row="2" Margin="10, 10, 10, 10"
+                              VerticalAlignment="Center"
+                              TextAlignment="Center"
+                              FontSize="64"
+                              TextWrapping="WrapWithOverflow"
+                              Text="Загрузка..." />
+            </Grid>
+            <!-- this launcher updates installer -->
+            <Grid Visibility="{Binding IsAppUpdatesAvailable, Converter={StaticResource BoolToVisibilityConverter}}"
+                  d:IsHidden="False">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <ui:TextBlock Grid.Row="0" Margin="10, 10, 10, 10"
+                              VerticalAlignment="Center"
+                              TextAlignment="Center"
+                              FontSize="32"
+                              TextWrapping="WrapWithOverflow">
+                    <Run Text="Требуется установить обновление.&#x0a;"/>
+                    <Run Text="С тебя нажать кнопку ниже,&#x0a;"/>
+                    <Run Text="c меня сделать всё автоматически.&#x0a;"/>
+                    <Run Text="Хотя бы попытаться..."/>
+                </ui:TextBlock>
+                <ui:TextBlock Grid.Row="1" Margin="10, 3"
+                              VerticalAlignment="Center"
+                              HorizontalAlignment="Right"
+                              FontSize="16"
+                              TextWrapping="WrapWithOverflow">
+                    <Run Text="Размер обновления: "/>
+                    <Run Text="{Binding AppUpdateSize}"/>
+                </ui:TextBlock>
+                <ui:TextBlock Grid.Row="2" Margin="10, 3"
+                              VerticalAlignment="Center"
+                              HorizontalAlignment="Right"
+                              FontSize="14"
+                              TextWrapping="WrapWithOverflow">
+                    <Run Text="Дата и время релиза: "/>
+                    <Run Text="{Binding AppUpdatedAt}"/>
+                </ui:TextBlock>
+                <!-- Translations file install button -->
+                <Grid Grid.Row="3" Margin="10"
+                      Visibility="{Binding InstallButtonVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Image Grid.Column="0"
+                           Height="64"
+                           Width="64"
+                           Source="{StaticResource ImgArrowFromUpToRight}"/>
+                    <ui:Button Grid.Column="1" Margin="10, 0"
+                               VerticalAlignment="Bottom"
+                               HorizontalAlignment="Stretch"
+                               IsEnabled="{Binding InstallButtonEnabled}"
+                               Click="ButtonInstallAppUpdate_OnClick">
+                        <ui:TextBlock Text="{Binding InstallButtonText}"
+                                      TextAlignment="Center"
+                                      FontSize="32" />
+                    </ui:Button>
+                    <Image Grid.Column="2"
+                           Height="64"
+                           Width="64"
+                           Source="{StaticResource ImgArrowFromUpToLeft}"/>
+                </Grid>
+                <!-- Downloading progress + cancel button -->
+                <Grid Grid.Row="3" Margin="10"
+                      Visibility="{Binding ProgressVisible, Converter={StaticResource BoolToVisibilityConverter}}"
+                      d:IsHidden="True">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition />
+                    </Grid.ColumnDefinitions>
+                    <ui:ProgressRing Grid.Column="0"
+                                     IsIndeterminate="{Binding ProgressIndeterminate}"
+                                     Progress="{Binding Progress}"/>
+                    <ui:TextBlock Grid.Column="1" Margin="10"
+                                  VerticalAlignment="Center"
+                                  FontSize="32">
+                        <Run Text="Скачиваем... "/>
+                        <Run Text="{Binding ProgressText}"/>
+                    </ui:TextBlock>
+                    <ui:Button Grid.Column="2" Margin="10, 0, 0, 0"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Stretch"
+                               IsEnabled="{Binding CancelButtonEnabled}"
+                               Click="ButtonInstallCancel_OnClick">
+                        <TextBlock Text="Отменить" FontSize="32" />
+                    </ui:Button>
+                </Grid>
+            </Grid>
+            <!-- this launger installer -->
+            <Grid Visibility="{Binding IsNeedToInstall, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                  d:IsHidden="False">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <ui:TextBlock Grid.Row="0" Margin="10, 10, 10, 10"
+                              VerticalAlignment="Center"
+                              TextAlignment="Center"
+                              FontSize="32"
+                              TextWrapping="WrapWithOverflow"
+                              Text="{Binding InstallerMessage, Mode=OneWay}" />
+                <Grid Grid.Row="1" Margin="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Image Grid.Column="0"
+                           Height="64"
+                           Width="64"
+                           Source="{StaticResource ImgArrowFromUpToRight}"/>
+                    <ui:Button Grid.Column="1" Margin="10, 0"
+                               VerticalAlignment="Bottom"
+                               HorizontalAlignment="Stretch"
+                               IsEnabled="{Binding InstallButtonEnabled}"
+                               Click="ButtonInstall_OnClick">
+                        <ui:TextBlock Text="{Binding InstallButtonText}"
+                                      TextAlignment="Center"
+                                      FontSize="32" />
+                    </ui:Button>
+                    <Image Grid.Column="2"
+                           Height="64"
+                           Width="64"
+                           Source="{StaticResource ImgArrowFromUpToLeft}"/>
+                </Grid>
+            </Grid>
+            <!-- .pak installer/updater -->
+            <Grid Visibility="{Binding UpdateAvailable, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                  d:IsHidden="True">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <ui:TextBlock Grid.Row="0" Margin="10, 10, 10, 10"
+                              VerticalAlignment="Center"
+                              TextAlignment="Center"
+                              FontSize="32"
+                              TextWrapping="WrapWithOverflow"
+                              Text="{Binding PakInstallerMessage}" />
+                <ui:TextBlock Grid.Row="1" Margin="10, 3"
+                              VerticalAlignment="Center"
+                              HorizontalAlignment="Right"
+                              FontSize="16"
+                              TextWrapping="WrapWithOverflow">
+                    <Run Text="Потребуется места на диске: "/>
+                    <Run Text="{Binding PakFileSize}"/>
+                </ui:TextBlock>
+                <ui:TextBlock Grid.Row="2" Margin="10, 3"
+                              VerticalAlignment="Center"
+                              HorizontalAlignment="Right"
+                              FontSize="14"
+                              TextWrapping="WrapWithOverflow">
+                    <Run Text="Последнее обновление за: "/>
+                    <Run Text="{Binding PakFileReleasedAt}"/>
+                </ui:TextBlock>
+                <!-- Translations file install button -->
+                <Grid Grid.Row="3" Margin="10"
+                      Visibility="{Binding InstallButtonVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Image Grid.Column="0"
+                           Height="64"
+                           Width="64"
+                           Source="{StaticResource ImgArrowFromUpToRight}"/>
+                    <ui:Button Grid.Column="1" Margin="10, 0"
+                               VerticalAlignment="Bottom"
+                               HorizontalAlignment="Stretch"
+                               IsEnabled="{Binding InstallButtonEnabled}"
+                               Click="ButtonInstallPakFile_OnClick">
+                        <ui:TextBlock Text="{Binding InstallButtonText}"
+                                      TextAlignment="Center"
+                                      FontSize="32" />
+                    </ui:Button>
+                    <Image Grid.Column="2"
+                           Height="64"
+                           Width="64"
+                           Source="{StaticResource ImgArrowFromUpToLeft}"/>
+                </Grid>
+                <!-- Downloading progress + cancel button -->
+                <Grid Grid.Row="3" Margin="10"
+                      Visibility="{Binding ProgressVisible, Converter={StaticResource BoolToVisibilityConverter}}"
+                      d:IsHidden="True">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition />
+                    </Grid.ColumnDefinitions>
+                    <ui:ProgressRing Grid.Column="0"
+                                     IsIndeterminate="{Binding ProgressIndeterminate}"
+                                     Progress="{Binding Progress}"/>
+                    <ui:TextBlock Grid.Column="1" Margin="10"
+                                  VerticalAlignment="Center"
+                                  FontSize="32">
+                        <Run Text="Скачиваем... "/>
+                        <Run Text="{Binding ProgressText}"/>
+                    </ui:TextBlock>
+                    <ui:Button Grid.Column="2" Margin="10, 0, 0, 0"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Stretch"
+                               IsEnabled="{Binding CancelButtonEnabled}"
+                               Click="ButtonInstallCancel_OnClick">
+                        <TextBlock Text="Отменить" FontSize="32" />
+                    </ui:Button>
+                </Grid>
+            </Grid>
+            <!-- launcher -->
+            <Grid Visibility="{Binding AllowLaunch, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                  d:IsHidden="True">
+                <Grid.RowDefinitions>
+                    <RowDefinition/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition/>
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0" Margin="5"
+                      VerticalAlignment="Bottom">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition/>
+                        <ColumnDefinition/>
+                        <ColumnDefinition/>
+                    </Grid.ColumnDefinitions>
+                    <Image Grid.Column="0" Source="{StaticResource ImgArrowFromLeftToBottom}"/>
+                    <Image Grid.Column="1" Source="{StaticResource ImgArrowFromLeftToBottom}"/>
+                    <Image Grid.Column="2" Source="{StaticResource ImgArrowFromLeftToBottom}"/>
+                </Grid>
+                <ui:Button Grid.Row="1" Margin="10"
+                           VerticalAlignment="Stretch"
+                           HorizontalAlignment="Stretch"
+                           IsEnabled="{Binding LaunchButtonEnabled}"
+                           Click="ButtonRunGame_OnClick">
+                    <ui:TextBlock Text="ЖМИ СЮДА, ЧТОБЫ ИГРАТЬ"
+                                  TextWrapping="WrapWithOverflow"
+                                  FontSize="90"/>
+                </ui:Button>
+                <Grid Grid.Row="2" Margin="5"
+                      VerticalAlignment="Top">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition/>
+                        <ColumnDefinition/>
+                        <ColumnDefinition/>
+                    </Grid.ColumnDefinitions>
+                    <Image Grid.Column="0" Source="{StaticResource ImgArrowFromRightToUp}"/>
+                    <Image Grid.Column="1" Source="{StaticResource ImgArrowFromRightToUp}"/>
+                    <Image Grid.Column="2" Source="{StaticResource ImgArrowFromRightToUp}"/>
+                </Grid>
+            </Grid>
+        </Grid>
+    </DockPanel>
+</ui:FluentWindow>
