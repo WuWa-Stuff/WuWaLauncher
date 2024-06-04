@@ -31,9 +31,9 @@ jobs:
       with:
         dotnet-version: 8.x.x
     - name: Build single exe
-      run: dotnet publish "${{ github.workspace }}/WuWaTranslated/WuWaTranslated.csproj" -c "ReleaseSingle" -o "${{ github.workspace }}/build_sf/" --os "win-x64" --sc true
+      run: dotnet publish "${{ github.workspace }}/WuWaTranslated/WuWaTranslated.csproj" -c "ReleaseSingle" -o "${{ github.workspace }}/build_sf/" --os "win" --sc true
     - name: Build
-      run: dotnet publish "${{ github.workspace }}/WuWaTranslated/WuWaTranslated.csproj" -c "Release" -o "${{ github.workspace }}/build/" --os "win-x64" --sc false
+      run: dotnet publish "${{ github.workspace }}/WuWaTranslated/WuWaTranslated.csproj" -c "Release" -o "${{ github.workspace }}/build/" --os "win" --sc false
     - name: Build to zip
       run: pushd "${{ github.workspace }}/build"; zip -r "${{ github.workspace }}/build.zip" .; popd
     - name: Release
