@@ -35,7 +35,6 @@ public partial class MainWindow
 
     internal const string AppLaunchModeUpdate = "UPDATE";
     internal const string AppLaunchModePostUpdate = "POST-UPDATE";
-    private const string AppLaunchModeInstall = "INSTALL";
 
     private readonly MainWindowContext _context;
     private readonly GithubApiClient _githubApiClient;
