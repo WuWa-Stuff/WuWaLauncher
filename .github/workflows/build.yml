@@ -1,4 +1,4 @@
-name: Pak file build
+name: App build
 
 on:
   push:
