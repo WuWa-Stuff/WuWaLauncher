@@ -2,13 +2,11 @@
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.Reflection;
 using System.Windows;
 using Wpf.Ui.Appearance;
 using WuWaTranslated.Attributes;
 using WuWaTranslated.GithubApi;
 using WuWaTranslated.GithubApi.Repos.Models;
-using WuWaTranslated.Models.Config;
 using WuWaTranslated.TaskState;
 using WuWaTranslated.Ui.Models;
 using File = System.IO.File;

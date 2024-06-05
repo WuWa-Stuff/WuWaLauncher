@@ -1,11 +1,9 @@
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Management;
 using System.Windows;
 using System.Windows.Input;
-using Wpf.Ui.Controls;
 using WuWaTranslated.TaskState;
 using WuWaTranslated.Ui.Models;
 
