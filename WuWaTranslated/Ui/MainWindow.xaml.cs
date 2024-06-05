@@ -604,11 +604,17 @@ public partial class MainWindow
 
             WindowState = WindowState.Minimized;
             await runResult.Content!.WaitForExitAsync().ConfigureAwait(false);
+            Dispatcher.Invoke(() => WindowState = WindowState.Normal);
         }
         finally
         {
+            _context.AllowLaunch = false;
+            _context.IsLoading = true;
+            await CheckAndHandlePakFileUpdate(false).ConfigureAwait(false);
+            _context.IsLoading = false;
+            _context.AllowLaunch = true;
+
             _context.LaunchButtonEnabled = true;
-            Dispatcher.Invoke(() => WindowState = WindowState.Normal);
         }
     }
 
