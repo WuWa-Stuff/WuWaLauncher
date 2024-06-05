@@ -11,9 +11,10 @@
                  WindowBackdropType="Acrylic"
                  WindowStartupLocation="CenterOwner"
                  ResizeMode="NoResize"
-                 MinWidth="300" MaxWidth="400"
-                 MinHeight="100" MaxHeight="200"
-                 Title="{Binding Title}">
+                 MinWidth="300" MaxWidth="700"
+                 MinHeight="100" MaxHeight="370"
+                 Title="{Binding Title}"
+                 KeyUp="AwaitingGameDialogWindow_OnKeyUp">
     <DockPanel>
         <ui:TitleBar DockPanel.Dock="Top"
                      FontSize="16"
@@ -29,6 +30,7 @@
             <ui:TextBlock Grid.Row="0"
                           Margin="10"
                           FontSize="16"
+                          TextWrapping="WrapWithOverflow"
                           Text="{Binding Message}" />
             <ui:Button Grid.Row="1"
                        Margin="10"

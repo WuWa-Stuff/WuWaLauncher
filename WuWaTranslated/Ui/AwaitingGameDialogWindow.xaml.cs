@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Management;
 using System.Windows;
+using System.Windows.Input;
 using Wpf.Ui.Controls;
 using WuWaTranslated.TaskState;
 using WuWaTranslated.Ui.Models;
@@ -127,10 +128,21 @@ public partial class AwaitingGameDialogWindow : IDisposable, IAsyncDisposable
         }
     }
 
-    private void ButtonCancel_OnClick(object sender, RoutedEventArgs e)
+    private void Cancel()
     {
         DialogResult = false;
         Close();
+    }
+
+    private void ButtonCancel_OnClick(object sender, RoutedEventArgs e)
+    {
+        Cancel();
+    }
+
+    private void AwaitingGameDialogWindow_OnKeyUp(object sender, KeyEventArgs e)
+    {
+        if (e.Key is Key.Escape)
+            Cancel();
     }
 
     public void Dispose()

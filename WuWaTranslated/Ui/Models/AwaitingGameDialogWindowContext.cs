@@ -5,9 +5,17 @@ namespace WuWaTranslated.Ui.Models;
 
 public class AwaitingGameDialogWindowContext : INotifyPropertyChanged
 {
-    public string Title { get; } = "Слыш, игру запусти";
+    public string Title { get; } = "Ожидаю запуска игры...";
 
-    public string Message { get; } = "Ожидаю запуска игры...";
+    public string Message { get; } = "Мне необходимо знать, куда установлена Wuthering Waves.\n" +
+                                     "Для этого тебе надо запустить игру и дождаться, когда пропадёт это сообщение.\n" +
+                                     "Причём надо запустить ИМЕННО игру, а не только её лаунчер!\n" +
+                                     "Это нужно для того, чтобы установить файл русификатора и далее запустить игру, чтобы русификатор сработал.\n" +
+                                     "\n" +
+                                     "Ответственность за твой аккаунт только на тебе!\n" +
+                                     "Запуская игру и/или используя это ПО, ты соглашаешься с вышенаписанным.\n" +
+                                     "\n" +
+                                     "Ожидаю запуск игры...";
 
     public string CancelButtonText { get; } = "Отмена";
 
