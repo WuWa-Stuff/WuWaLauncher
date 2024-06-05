@@ -178,7 +178,13 @@ public partial class MainWindow
 
         var gameDirectory = gameDirectoryResult.Content!;
         ChangeGameDirectory(gameDirectory);
-        return await _config.EditConfig(c => c.GameDirectory = gameDirectory);
+        var configResult = await _config.EditConfig(c => c.GameDirectory = gameDirectory);
+
+        _context.IsLoading = true;
+        await CheckAndHandlePakFileUpdate(true).ConfigureAwait(false);
+        _context.IsLoading = false;
+
+        return configResult;
     }
 
     private bool FindLauncherReleaseFile(AssetItem item)
@@ -322,6 +328,70 @@ public partial class MainWindow
             _context.IsAppUpdatesAvailable = false;
     }
 
+    private async Task<bool> CheckAndHandleLauncherUpdate()
+    {
+        var bResult = await CheckForLauncherUpdates(default).ConfigureAwait(false);
+        if (bResult.State is TaskState.Enums.TaskState.Success && bResult.Content)
+        {
+            _context.IsAppUpdatesAvailable = true;
+            return false;
+        }
+
+        HandleError(bResult);
+        return true;
+    }
+
+    private async Task<bool> CheckAndHandlePakFileUpdate(bool showIfError)
+    {
+        var result = await CheckForPakFileUpdates(default).ConfigureAwait(false);
+        if (result.State is TaskState.Enums.TaskState.Cancelled)
+            return false;
+        
+        if (result.State is TaskState.Enums.TaskState.Failed)
+        {
+            if (showIfError)
+            {
+                _context.PakInstallerMessage = result.ErrorMessage ?? "Что-то пошло не так во время проверки обновления.";
+                _context.InstallButtonEnabled = false;
+                _context.InstallButtonVisible = false;
+                _context.UpdateAvailable = true;
+            }
+            return !showIfError;
+        }
+
+        _context.IsLangFileInstalled = File.Exists(_translationFile);
+        if (!_context.IsLangFileInstalled)
+        {
+            _context.UpdateAvailable = true;
+            return false;
+        }
+
+        var localSha = await Utilities.CalculateSha256OfFile(_translationFile, default)
+            .ConfigureAwait(false);
+
+        if (localSha.State is not TaskState.Enums.TaskState.Success)
+        {
+            HandleError(result);
+            Environment.Exit(1);
+            return false;
+        }
+
+        _pakShaLocal = localSha.Content!;
+        _context.UpdateAvailable = !_pakShaServer.Equals(_pakShaLocal, StringComparison.Ordinal);
+        if (_context.UpdateAvailable)
+        {
+            _context.PakInstallerMessage = "Доступно обновление русского языка в игре.\n" +
+                                           "Тебе руками особо ничего делать не надо (надеюсь).\n" +
+                                           "Просто нажми кнопку ниже\n" +
+                                           "Всё просто, да?";
+
+            return false;
+        }
+
+        _context.AllowLaunch = true;
+        return true;
+    }
+
     private async void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
     {
         try
@@ -345,61 +415,12 @@ public partial class MainWindow
             if (!_context.IsAppInstalled)
                 return;
 
-            var bResult = await CheckForLauncherUpdates(default).ConfigureAwait(false);
-            if (bResult.State is TaskState.Enums.TaskState.Success && bResult.Content)
-            {
-                _context.IsAppUpdatesAvailable = true;
-                return;
-            }
-            else
-            {
-                HandleError(bResult);
-            }
-
-            result = await CheckForPakFileUpdates(default).ConfigureAwait(false);
-            if (result.State is TaskState.Enums.TaskState.Cancelled)
+            var bResult = await CheckAndHandleLauncherUpdate().ConfigureAwait(false);
+            if (!bResult)
                 return;
 
-            if (result.State is TaskState.Enums.TaskState.Failed)
-            {
-                _context.PakInstallerMessage = result.ErrorMessage ?? "Что-то пошло не так во время проверки обновления.";
-                _context.InstallButtonEnabled = false;
-                _context.InstallButtonVisible = false;
-                _context.UpdateAvailable = true;
-                return;
-            }
-
-            _context.IsLangFileInstalled = File.Exists(_translationFile);
-            if (!_context.IsLangFileInstalled)
-            {
-                _context.UpdateAvailable = true;
-            }
-            else
-            {
-                var localSha = await Utilities.CalculateSha256OfFile(_translationFile, default)
-                    .ConfigureAwait(false);
-
-                if (localSha.State is not TaskState.Enums.TaskState.Success)
-                {
-                    HandleError(result);
-                    Environment.Exit(1);
-                    return;
-                }
-
-                _pakShaLocal = localSha.Content!;
-                _context.UpdateAvailable = !_pakShaServer.Equals(_pakShaLocal, StringComparison.Ordinal);
-                if (_context.UpdateAvailable)
-                {
-                    _context.PakInstallerMessage = "Доступно обновление русского языка в игре.\n" +
-                                                   "Тебе руками особо ничего делать не надо (надеюсь).\n" +
-                                                   "Просто нажми кнопку ниже\n" +
-                                                   "Всё просто, да?";
-                }
-                else
-                {
-                    _context.AllowLaunch = true;
-                }
-            }
+            bResult = await CheckAndHandlePakFileUpdate(true).ConfigureAwait(false);
+            // todo: check bResult for false and call return for new code added below...
         }
         finally
         {
