@@ -610,9 +610,8 @@ public partial class MainWindow
         {
             _context.AllowLaunch = false;
             _context.IsLoading = true;
-            await CheckAndHandlePakFileUpdate(false).ConfigureAwait(false);
+            _context.AllowLaunch = await CheckAndHandlePakFileUpdate(false).ConfigureAwait(false);
             _context.IsLoading = false;
-            _context.AllowLaunch = true;
 
             _context.LaunchButtonEnabled = true;
         }
