@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Text.Json.Nodes;
 using System.Windows;
 using Wpf.Ui.Appearance;
 using WuWaTranslated.Attributes;
@@ -38,6 +39,8 @@ public partial class MainWindow
     private readonly GithubApiClient _githubApiClient;
     private readonly ConfigHolder _config;
 
+    private readonly string _winAppDataRoot;
+
     private readonly string _appDirectory;
     private readonly string _appDataDirectory;
     private readonly ReadOnlyCollection<string> _gameLaunchArgs;
@@ -59,8 +62,9 @@ public partial class MainWindow
     {
         _context = new MainWindowContext();
 
-        _appDataDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "wuwa_translated");
+        _winAppDataRoot = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+
+        _appDataDirectory = Path.Combine(_winAppDataRoot, "wuwa_translated");
         var configFilePath = Path.Combine(_appDataDirectory, "config.json");
         _config = new ConfigHolder(configFilePath);
 
@@ -68,17 +72,12 @@ public partial class MainWindow
 #if DEBUG
         var dbgGamePath = Environment.GetEnvironmentVariable("DBG_GAME_PATH");
         if (!string.IsNullOrEmpty(dbgGamePath))
-            gameDirectory = Path.Combine(dbgGamePath, ".fake_folder"); // this folder will not exist, it's only for debugging
+            gameDirectory = dbgGamePath;
 #endif
 
         if (!Directory.Exists(_appDataDirectory))
             Directory.CreateDirectory(_appDataDirectory);
 
-#if !SINGLE_FILE_BUILD
-        gameDirectory = Directory.GetParent(gameDirectory)?.FullName
-                        ?? Path.GetPathRoot(gameDirectory)
-                        ?? gameDirectory;
-#endif
         ChangeGameDirectory(gameDirectory);
 
         var launchArgs = new List<string> { "Client", "-fileopenlog" }; // о нэээт... они своровали параметр запуска... (с)
@@ -392,6 +391,32 @@ public partial class MainWindow
         return true;
     }
 
+    private async Task<TaskResult<string>> FindGameDirectoryAutomatically(CancellationToken cancellationToken = default)
+    {
+        // лаунчер тупо создаёт файл, но не использует его, но мы его попробуем прочитать...
+        // todo: собственно понять, где лаунчер реально хранит путь до игры
+
+        var krLauncherDataPath = Path.Combine(_winAppDataRoot, "KRLauncher", "G153", "C50004");
+        var krStarterGameJson = Path.Combine(krLauncherDataPath, "kr_starter_game.json");
+        if (!File.Exists(krStarterGameJson))
+            return new TaskResult<string>("Не могу найти файл 'kr_starter_game.json'", default);
+
+        try
+        {
+            var content = await File.ReadAllTextAsync(krStarterGameJson, cancellationToken);
+            var jNode = JsonNode.Parse(content);
+            var path = jNode?["path"]?.GetValue<string>();
+            if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
+                return path;
+        }
+        catch (Exception e)
+        {
+            return e;
+        }
+
+        return new TaskResult<string>("Не могу найти путь до игры автоматически", default);
+    }
+
     private async void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
     {
         try
@@ -409,6 +434,17 @@ public partial class MainWindow
             else if (!string.IsNullOrEmpty(config.GameDirectory))
             {
                 ChangeGameDirectory(config.GameDirectory);
+            }
+
+            if (!_context.IsAppInstalled)
+            {
+                var autoFindResult = await FindGameDirectoryAutomatically().ConfigureAwait(false);
+                if (autoFindResult.State is TaskState.Enums.TaskState.Success)
+                {
+                    ChangeGameDirectory(autoFindResult.Content!);
+                    await _config.EditConfig(c => c.GameDirectory = autoFindResult.Content)
+                        .ConfigureAwait(false);
+                }
             }
 
             _context.IsAppInstalled = Directory.Exists(_gamePaksDirectory);
