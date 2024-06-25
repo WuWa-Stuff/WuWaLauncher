@@ -396,7 +396,7 @@ public partial class MainWindow
     {
         try
         {
-            var result = await _config.Load();
+            var result = await _config.Load().ConfigureAwait(false);
             HandleError(result);
 
             var config = await _config.Get();
@@ -404,7 +404,7 @@ public partial class MainWindow
             _context.IsAppInstalled = Directory.Exists(_gamePaksDirectory);
             if (_context.IsAppInstalled)
             {
-                await _config.EditConfig(c => c.GameDirectory = _gameDirectory);
+                await _config.EditConfig(c => c.GameDirectory = _gameDirectory).ConfigureAwait(false);
             }
             else if (!string.IsNullOrEmpty(config.GameDirectory))
             {
